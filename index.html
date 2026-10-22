@@ -146,12 +146,13 @@ function importJson(el){const f=el.files[0];if(!f)return;const r=new FileReader(
   if(!Array.isArray(d.items))throw 0;if(!confirm('Ganti semua data saat ini dengan isi file?'))return;S={items:d.items,tpls:d.tpls||{},next:d.next||(Math.max(0,...d.items.map(i=>i.id))+1)};save();refresh();alert('Impor berhasil')}catch(e){alert('File tidak valid')}};r.readAsText(f);el.value=''}
 
 /* CLI */
-function log(t,cls){const o=$('out');o.textContent+=(o.textContent?'\n':'')+t;o.scrollTop=o.scrollHeight}
+let Q=null;
+function log(t,cls){if(Q){Q.push(t);return}const o=$('out');o.textContent+=(o.textContent?'\n':'')+t;o.scrollTop=o.scrollHeight}
 const tok=s=>(s.match(/(?:[^\s="]+="[^"]*"|"[^"]*"|\S+)/g)||[]).map(t=>t.replace(/"/g,''));
 const TM={s:'storage',storage:'storage',d:'daily',daily:'daily',o:'other',other:'other'};
 function kv(a){const o={},p=[];a.forEach(t=>{const i=t.indexOf('=');i>0?o[t.slice(0,i)]=t.slice(i+1):p.push(t)});return{o,p}}
 function fmt(i){const s=Object.entries(i.specs).map(([k,v])=>k+'='+v).join(', ');return `#${i.id} ${i.name} [${i.type}${i.cat?'/'+i.cat:''}] x${i.qty}${s?' | '+s:''}`}
-function run(line){const a=tok(line.trim());if(!a.length)return;const c=a.shift().toLowerCase(),{o,p}=kv(a);
+function run(line){if(line.trim().startsWith('#'))return;const a=tok(line.trim());if(!a.length)return;const c=a.shift().toLowerCase(),{o,p}=kv(a);
   const find=id=>S.items.find(i=>i.id===parseInt(id));
   if(c==='help')return log(`add "Nama" type=s|d|o cat=SSD qty=2 spek=isi ...
 ls [kata] [type=s|d|o]     daftar barang
@@ -184,6 +185,9 @@ clear                      bersihkan layar`);
   if(c==='export')return log(JSON.stringify(S));
   log('Perintah tidak dikenal. Ketik help')}
 $('cmd').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value;if(!v.trim())return;log('> '+v);run(v);e.target.value=''}});
+function batch(t){const L=t.split(/\r?\n/).filter(l=>l.trim()&&!l.trim().startsWith('#'));Q=[];L.forEach(run);const E=Q.filter(x=>/^(Error|Perintah)/.test(x));Q=null;
+  log(`Batch selesai: ${L.length} perintah, ${E.length} error. Total ${S.items.length} jenis barang.`+(E.length?'\n'+E.join('\n'):''))}
+$('cmd').addEventListener('paste',e=>{const t=(e.clipboardData||window.clipboardData).getData('text');if(!/\n/.test(t.trim()))return;e.preventDefault();log('> [paste '+t.trim().split(/\r?\n/).length+' baris]');batch(t)});
 refresh();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
