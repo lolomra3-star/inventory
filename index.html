@@ -24,7 +24,8 @@ label{font-size:13px;color:var(--mu)}
 .row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.row>.f0{flex:0 0 auto}
 .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .nm{font-weight:600}.tag{font-size:12px;color:var(--mu)}
-.t-storage{border-left:4px solid #3b82f6}.t-daily{border-left:4px solid #22a06b}.t-other{border-left:4px solid #d19a1e}
+.t-storage{border-left:4px solid #3b82f6}.t-daily{border-left:4px solid #22a06b}.t-other{border-left:4px solid #d19a1e}.t-throw{border-left:4px solid #8a8f98}
+.ex{font-size:12px;border-radius:6px;padding:1px 7px;margin-left:4px;border:1px solid var(--bd)}.ex.bad{background:var(--bad);border-color:var(--bad);color:#fff}.ex.warn{background:#d19a1e;border-color:#d19a1e;color:#fff}
 .sp{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
 .sp span{font-size:12px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:1px 7px}
 .q{display:flex;align-items:center;gap:6px}.q b{min-width:28px;text-align:center}
@@ -37,15 +38,23 @@ nav button.on{color:var(--ac);font-weight:700}
 #out{background:#0d1117;color:#c9d1d9;font:13px/1.4 ui-monospace,Menlo,monospace;padding:10px;border-radius:8px;height:46vh;overflow:auto;white-space:pre-wrap;word-break:break-word}
 #cmd{font-family:ui-monospace,Menlo,monospace;margin-top:8px}
 .empty{color:var(--mu);text-align:center;padding:28px 8px}
+input.ck{width:20px;height:20px;margin:0 8px 0 0;flex:none;vertical-align:middle}body.sel{padding-bottom:130px}
+.th{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--bd);background:var(--bg)}
 .chips{display:flex;gap:6px;margin-bottom:8px;overflow-x:auto}.chips button{white-space:nowrap;padding:5px 12px;border-radius:99px}
 .chips button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 @media(prefers-color-scheme:dark){.chips button.on{color:#0b1220}}
 </style></head><body><main>
-<h1>Inventaris <small style="font-weight:400;color:var(--mu)">v3</small></h1><div class="sum" id="sum"></div>
+<h1>Inventaris <small style="font-weight:400;color:var(--mu)">v7</small></h1><div class="sum" id="sum"></div>
 
 <section class="v on" id="v-list">
-  <input id="q" placeholder="Cari nama, kategori, spek…" oninput="renderList()">
+  <div class="row"><input id="q" placeholder="Cari nama, kategori, spek…" oninput="renderList()"><button class="f0" id="selbtn" onclick="selToggle()" style="margin-bottom:7px">Pilih</button></div>
+  <div id="bk" class="card" style="display:none"><b>Ubah barang terpilih</b><div class="tag" style="margin:4px 0 10px">Kolom kosong tidak diubah.</div>
+    <label>Jenis</label><select id="bk-type"><option value="">(tidak diubah)</option><option value="storage">Storage</option><option value="daily">Daily Use</option><option value="other">Other Use</option><option value="throw">Throwable</option></select>
+    <label>Kategori</label><input id="bk-kat" list="kats"><label>Sub kategori</label><input id="bk-cat" list="cats"><label>Lokasi</label><input id="bk-loc" list="locs"><label>Wadah</label><select id="bk-cont"></select>
+    <div class="row"><button class="p" onclick="bulkApply()">Terapkan</button><button onclick="$('bk').style.display='none'">Tutup</button></div></div>
   <div class="chips" id="chips"></div>
+  <div class="row"><select id="fk" onchange="kfilt=this.value;sfilt='';renderList()"></select><select id="fs" onchange="sfilt=this.value;renderList()"></select></div>
+  <select id="sort" onchange="renderList()"><option value="id">Urut: input lama</option><option value="new">Terbaru</option><option value="name">Nama A-Z</option><option value="qty">Jumlah terbanyak</option><option value="exp">Exp terdekat</option><option value="cond">Kondisi terendah</option><option value="val">Nilai tertinggi</option></select>
   <div id="list"></div>
 </section>
 
@@ -54,10 +63,22 @@ nav button.on{color:var(--ac);font-weight:700}
     <b id="ftitle">Tambah barang</b><br><br>
     <label>Nama barang</label><input id="f-name">
     <label>Jenis</label>
-    <select id="f-type"><option value="storage">Storage</option><option value="daily">Daily Use</option><option value="other">Other Use</option></select>
+    <select id="f-type"><option value="storage">Storage (disimpan, belum ada rencana)</option><option value="daily">Daily Use (dipakai tiap hari)</option><option value="other">Other Use (dipakai sesekali)</option><option value="throw">Throwable (akan dibuang)</option></select>
+    <label>Kategori (pilih atau ketik baru)</label>
+    <input id="f-kat" list="kats"><datalist id="kats"></datalist>
     <label>Sub kategori (ketik sendiri)</label>
     <input id="f-cat" list="cats" oninput="applyTpl()"><datalist id="cats"></datalist>
     <label>Jumlah</label><input id="f-qty" type="number" min="0" value="1" inputmode="numeric">
+    <label>Lokasi (kamar, rak, meja…)</label><input id="f-loc" list="locs"><datalist id="locs"></datalist>
+    <label>Tanggal kadaluarsa (opsional)</label><input id="f-exp" type="date">
+    <label>Catatan</label><input id="f-note">
+    <label>Satuan (opsional, default pcs)</label><input id="f-unit" list="units"><datalist id="units"><option value="pcs"><option value="set"><option value="pak"><option value="botol"><option value="kg"><option value="gram"><option value="liter"><option value="ml"><option value="lembar"><option value="meter"></datalist>
+    <label>Kondisi (opsional; 1 rusak, 10 terbaik)</label><select id="f-cond"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
+    <label>Harga satuan (opsional)</label><input id="f-price" type="number" min="0" inputmode="decimal">
+    <label>Tanggal beli (opsional)</label><input id="f-bought" type="date">
+    <label>Stok minimum (opsional)</label><input id="f-min" type="number" min="0" inputmode="numeric">
+    <label>Di dalam wadah/kotak (opsional)</label><select id="f-cont"></select>
+    <label>Foto (opsional, otomatis dikompres)</label><input id="f-photo" type="file" accept="image/*" multiple onchange="addPhotos(this)"><div id="thumbs" style="display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px"></div>
     <label>Spek</label><div id="specs"></div>
     <button class="f0" onclick="addSpecRow()">+ Spek</button>
     <div class="row" style="margin-top:12px"><button class="p" onclick="saveForm()">Simpan</button><button onclick="resetForm();show('list')">Batal</button></div>
@@ -65,6 +86,9 @@ nav button.on{color:var(--ac);font-weight:700}
 </section>
 
 <section class="v" id="v-tpl">
+  <div class="card"><b>Kategori</b><div class="tag" style="margin:4px 0 10px">Kelompok besar, mis. Kelistrikan atau Makanan/Minuman.</div>
+    <div class="row"><input id="k-new" placeholder="kategori baru" style="margin-bottom:0"><button class="p f0" onclick="addK()">Tambah</button></div></div>
+  <div id="kats-list"></div>
   <div class="card">
     <b>Template spek</b>
     <div class="tag" style="margin:4px 0 10px">Tiap sub kategori bisa punya daftar kolom spek yang otomatis muncul saat input.</div>
@@ -85,12 +109,17 @@ nav button.on{color:var(--ac);font-weight:700}
 </section>
 
 <section class="v" id="v-data">
-  <div class="card"><b>Backup data</b><div class="tag" style="margin:4px 0 10px">Data tersimpan di browser perangkat ini. Ekspor berkala untuk cadangan.</div>
-    <div class="row"><button onclick="exportJson()">Ekspor JSON</button><button onclick="document.getElementById('imp').click()">Impor JSON</button></div>
+  <div class="card"><b>Ringkasan</b><div id="sumcard"></div></div>
+  <div class="card"><b>Backup data</b><div class="tag" style="margin:4px 0 10px">Data dan foto tersimpan di penyimpanan aplikasi (folder InvenImage), tidak terlihat di file manager. Pakai Ekspor + foto untuk cadangan lengkap.</div>
+    <div class="row"><button onclick="exportJson(false)">Ekspor JSON</button><button onclick="exportJson(true)">Ekspor + foto</button><button onclick="document.getElementById('imp').click()">Impor JSON</button></div>
     <input id="imp" type="file" accept=".json,application/json" style="display:none" onchange="importJson(this)">
   </div>
+  <div class="card"><b>Riwayat terbaru</b><div id="hist" class="tag" style="margin-top:8px;white-space:pre-wrap"></div></div>
 </section>
 </main>
+<div id="selbar" style="display:none;position:fixed;left:0;right:0;bottom:calc(50px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--bd);padding:8px 10px;gap:6px;align-items:center;z-index:30;flex-wrap:wrap"><span id="selc" class="tag" style="flex:1">0 dipilih</span><button onclick="selAll()">Semua</button><button onclick="bulkOpen()">Ubah</button><button class="d" onclick="bulkDel()">Hapus</button></div>
+<div id="undo" style="display:none;position:fixed;left:12px;right:12px;bottom:calc(60px + env(safe-area-inset-bottom));background:#222;color:#fff;border-radius:10px;padding:10px 14px;z-index:40;align-items:center;justify-content:space-between"><span id="undotxt"></span><button onclick="undoDel()" style="background:none;border:0;color:#6aa6ff;font-weight:700">Urungkan</button></div>
+<div id="ov" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:50;align-items:center;justify-content:center"><img id="ovi" style="max-width:96%;max-height:92%;border-radius:8px"></div>
 <nav>
   <button class="on" data-v="list" onclick="show('list')">Barang</button>
   <button data-v="form" onclick="resetForm();show('form')">Tambah</button>
@@ -99,94 +128,205 @@ nav button.on{color:var(--ac);font-weight:700}
   <button data-v="data" onclick="show('data')">Data</button>
 </nav>
 <script>
-const TL={storage:'Storage',daily:'Daily Use',other:'Other Use'};
-let S={items:[],tpls:{},next:1},filt='all',editId=null;
+const TL={storage:'Storage',daily:'Daily Use',other:'Other Use',throw:'Throwable'};
+const DK=['Kelistrikan','Komputer','Jaringan','Alat','Alat tulis','Makanan/Minuman','Dapur','Furnitur','Pakaian','Lainnya'];
+let S={items:[],tpls:{},next:1,kats:[],log:[]},filt='all',kfilt='',sfilt='',editId=null,KL=[],TK=[],KK=[],UNDO=null,UT=0,SEL=new Set(),selMode=false,VIS=[];
 try{const r=localStorage.getItem('inv1');if(r)S=JSON.parse(r)}catch(e){}
+function norm(){S.kats=S.kats||[];S.log=S.log||[];S.tpls=S.tpls||{};if(!S.kinit){S.kats=[...new Set([...DK,...S.kats])];S.kinit=1}
+  S.items.forEach(i=>{['kat','cat','exp','loc','note','unit','bought','cond','price','min','cont'].forEach(k=>{if(i[k]===undefined||i[k]===null)i[k]=''});i.specs=i.specs||{};i.photos=i.photos||[]})}
+norm();
 function save(){try{localStorage.setItem('inv1',JSON.stringify(S))}catch(e){alert('Gagal menyimpan ke penyimpanan browser')}}
 const $=id=>document.getElementById(id);
+function H(m){S.log.push({t:new Date().toISOString().slice(0,16).replace('T',' '),m});if(S.log.length>300)S.log.splice(0,S.log.length-300)}
+function renderHist(){$('hist').textContent=S.log.slice(-60).reverse().map(x=>x.t+'  '+x.m).join('\n')||'(kosong)'}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function show(v){document.querySelectorAll('.v').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  if(v==='tpl')renderTpl();if(v==='cli'&&!$('out').textContent)log('Ketik help untuk daftar perintah.');
-  if(v==='form'&&!$('specs').children.length)addSpecRow()}
+  if(v==='tpl')renderTpl();if(v==='data'){renderHist();renderSum()}if(v==='cli'&&!$('out').textContent)log('Ketik help untuk daftar perintah.');
+  if(v==='form'){fillCont(editId||0);if(!$('specs').children.length)addSpecRow()}}
 function refresh(){renderList();renderTpl();$('cats').innerHTML=cats().map(c=>`<option value="${esc(c)}">`).join('');
-  const u=S.items.reduce((a,i)=>a+i.qty,0);$('sum').textContent=`${S.items.length} jenis barang, ${u} unit total`}
+  const u=S.items.reduce((a,i)=>a+i.qty,0);const ex=S.items.filter(i=>{const d=dleft(i.exp);return d!==null&&d<=30}).length;const lo=S.items.filter(lowQ).length,tv=S.items.reduce((a,i)=>a+(+i.price||0)*i.qty,0);
+  $('sum').textContent=`${S.items.length} jenis barang, ${u} unit total`+(ex?`, ${ex} kadaluarsa/segera`:'')+(lo?`, ${lo} stok menipis`:'')+(tv?`, nilai Rp ${tv.toLocaleString('id-ID')}`:'');
+  $('kats').innerHTML=katAll().map(c=>`<option value="${esc(c)}">`).join('');
+  $('locs').innerHTML=[...new Set(S.items.map(i=>i.loc).filter(Boolean))].sort().map(c=>`<option value="${esc(c)}">`).join('')}
 function cats(){return [...new Set([...Object.keys(S.tpls),...S.items.map(i=>i.cat).filter(Boolean)])].sort()}
+function katAll(){return [...new Set([...S.kats,...S.items.map(i=>i.kat).filter(Boolean)])]}
+function dleft(e){if(!e)return null;return Math.ceil((new Date(e+'T00:00:00')-new Date(new Date().toDateString()))/864e5)}
+function exBadge(e){const d=dleft(e);if(d===null)return'';return d<0?`<span class="ex bad">Kadaluarsa ${-d} hari lalu</span>`:d<=30?`<span class="ex warn">Sisa ${d} hari</span>`:`<span class="ex">Exp ${esc(e)}</span>`}
+const lowQ=i=>i.min!==''&&i.qty<=i.min;
+const money=n=>'Rp '+(+n).toLocaleString('id-ID');
+function fillCont(self){$('f-cont').innerHTML='<option value="">(tidak di dalam wadah)</option>'+S.items.filter(x=>x.id!==self).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>`<option value="${x.id}">${esc(x.name)} #${x.id}</option>`).join('')}
 function renderList(){
   const q=$('q').value.toLowerCase();
-  $('chips').innerHTML=['all','storage','daily','other'].map(t=>`<button class="${filt===t?'on':''}" onclick="filt='${t}';renderList()">${t==='all'?'Semua':TL[t]}</button>`).join('');
-  const L=S.items.filter(i=>(filt==='all'||i.type===filt)&&(!q||(i.name+' '+i.cat+' '+Object.entries(i.specs).map(e=>e.join(' ')).join(' ')).toLowerCase().includes(q)));
-  $('list').innerHTML=L.length?L.map(i=>`<div class="card t-${i.type}"><div class="top"><span class="nm">${esc(i.name)}</span><span class="tag">#${i.id}</span></div>
-  <div class="tag">${TL[i.type]}${i.cat?' / '+esc(i.cat):''}</div>
+  $('chips').innerHTML=['all','storage','daily','other','throw','exp','low'].map(t=>`<button class="${filt===t?'on':''}" onclick="filt='${t}';renderList()">${t==='all'?'Semua':t==='exp'?'Exp':t==='low'?'Menipis':TL[t]}</button>`).join('');
+  KL=[...new Set(S.items.map(i=>i.kat).filter(Boolean))].sort();
+  const SL=[...new Set(S.items.filter(i=>!kfilt||i.kat===kfilt).map(i=>i.cat).filter(Boolean))].sort();
+  if(sfilt&&!SL.includes(sfilt))sfilt='';
+  $('fk').innerHTML='<option value="">Semua kategori</option>'+KL.map(k=>`<option value="${esc(k)}"${k===kfilt?' selected':''}>${esc(k)}</option>`).join('');
+  $('fs').innerHTML='<option value="">Semua sub kategori</option>'+SL.map(k=>`<option value="${esc(k)}"${k===sfilt?' selected':''}>${esc(k)}</option>`).join('');
+  const nv=x=>x===''?1e9:x,so=$('sort').value;
+  const L=S.items.filter(i=>{const d=dleft(i.exp);return(filt==='all'||(filt==='exp'?d!==null&&d<=30:filt==='low'?lowQ(i):i.type===filt))&&(!kfilt||i.kat===kfilt)&&(!sfilt||i.cat===sfilt)&&(!q||(i.name+' '+i.kat+' '+i.cat+' '+i.loc+' '+i.note+' '+Object.entries(i.specs).map(e=>e.join(' ')).join(' ')).toLowerCase().includes(q))});
+  L.sort(so==='new'?(a,b)=>b.id-a.id:so==='name'?(a,b)=>a.name.localeCompare(b.name):so==='qty'?(a,b)=>b.qty-a.qty:so==='exp'?(a,b)=>(dleft(a.exp)??1e9)-(dleft(b.exp)??1e9):so==='cond'?(a,b)=>nv(a.cond)-nv(b.cond):so==='val'?(a,b)=>(b.qty*(+b.price||0))-(a.qty*(+a.price||0)):(a,b)=>a.id-b.id);
+  VIS=L.map(i=>i.id);$('list').innerHTML=L.length?L.map(i=>{const C=i.cont?S.items.find(x=>x.id===i.cont):null,K=S.items.filter(x=>x.cont===i.id),
+    det=[i.cond!==''?'Kondisi '+i.cond+'/10':'',i.price!==''?money(i.price)+'/'+(i.unit||'pcs'):'',i.bought?'Beli '+i.bought:'',i.min!==''?'Min '+i.min:''].filter(Boolean);
+    return `<div class="card t-${i.type}"><div class="top"><span class="nm">${selMode?`<input type="checkbox" class="ck" ${SEL.has(i.id)?'checked':''} onchange="tog(${i.id})">`:''}${esc(i.name)}</span><span class="tag">#${i.id}</span></div>
+  <div class="tag">${TL[i.type]||i.type}${i.kat?' / '+esc(i.kat):''}${i.cat?' / '+esc(i.cat):''}${i.loc?' | Lokasi: '+esc(i.loc):''} ${exBadge(i.exp)}${lowQ(i)?'<span class="ex warn">Stok menipis</span>':''}</div>
+  ${C?`<div class="tag">Di dalam: ${esc(C.name)} #${C.id}</div>`:''}${K.length?`<div class="tag">Isi (${K.length}): ${esc(K.map(x=>x.name).join(', '))}</div>`:''}
+  ${det.length?`<div class="tag">${esc(det.join(' | '))}</div>`:''}
   ${Object.keys(i.specs).length?'<div class="sp">'+Object.entries(i.specs).map(([k,v])=>`<span>${esc(k)}: ${esc(v)}</span>`).join('')+'</div>':''}
-  <div class="top"><div class="q"><button onclick="chg(${i.id},-1)">−</button><b>${i.qty}</b><button onclick="chg(${i.id},1)">+</button></div>
-  <div class="acts"><button onclick="edit(${i.id})">Ubah</button><button class="d" onclick="del(${i.id})">Hapus</button></div></div></div>`).join('')
-  :'<div class="empty">Belum ada barang. Buka tab Tambah atau pakai CLI.</div>'}
-function chg(id,d){const i=S.items.find(x=>x.id===id);i.qty=Math.max(0,i.qty+d);save();refresh()}
-function del(id){if(confirm('Hapus barang ini?')){S.items=S.items.filter(i=>i.id!==id);save();refresh()}}
+  ${i.note?`<div class="tag">${esc(i.note)}</div>`:''}
+  ${(i.photos||[]).length?'<div class="sp" style="gap:6px">'+i.photos.slice(0,4).map(n=>`<img class="th" data-p="${esc(n)}" onclick="big(this)">`).join('')+'</div>':''}
+  <div class="top"><div class="q"><button onclick="chg(${i.id},-1)">−</button><b>${i.qty}</b><span class="tag">${esc(i.unit||'pcs')}</span><button onclick="chg(${i.id},1)">+</button></div>
+  <div class="acts"><button onclick="edit(${i.id})">Ubah</button><button class="d" onclick="del(${i.id})">Hapus</button></div></div></div>`}).join('')
+  :'<div class="empty">Belum ada barang. Buka tab Tambah atau pakai CLI.</div>';loadThumbs()}
+function chg(id,d){const i=S.items.find(x=>x.id===id),o=i.qty;i.qty=Math.max(0,i.qty+d);H('Jumlah #'+id+' '+i.name+': '+o+' → '+i.qty);save();refresh()}
+function rmItem(i){rmItems([i])}
+function rmItems(L){commitUndo();const pairs=[];S.items.forEach(x=>{if(L.some(i=>i.id===x.cont)){pairs.push([x.id,x.cont]);x.cont=''}});
+  S.items=S.items.filter(x=>!L.includes(x));UNDO={L:L.map(i=>({...i})),pairs};H('Hapus '+L.map(i=>'#'+i.id+' '+i.name).join(', ').slice(0,200));
+  $('undotxt').textContent=L.length+' barang dihapus';$('undo').style.display='flex';clearTimeout(UT);UT=setTimeout(commitUndo,12000)}
+function commitUndo(){if(UNDO){UNDO.L.forEach(i=>(i.photos||[]).forEach(n=>IMG.del(n).catch(()=>{})));UNDO=null}clearTimeout(UT);$('undo').style.display='none'}
+function undoDel(){if(!UNDO)return;S.items.push(...UNDO.L);S.items.sort((a,b)=>a.id-b.id);UNDO.pairs.forEach(([c,p])=>{const x=S.items.find(y=>y.id===c);if(x)x.cont=p});
+  H('Urungkan hapus '+UNDO.L.length+' barang');UNDO=null;clearTimeout(UT);$('undo').style.display='none';save();refresh()}
+function selUI(){$('selbar').style.display=selMode?'flex':'none';$('selbtn').textContent=selMode?'Selesai':'Pilih';$('selc').textContent=SEL.size+' dipilih';if(document.body)document.body.classList.toggle('sel',selMode)}
+function selToggle(){selMode=!selMode;SEL.clear();$('bk').style.display='none';selUI();renderList()}
+function selOff(){selMode=false;SEL.clear();$('bk').style.display='none';selUI();renderList()}
+function tog(id){SEL.has(id)?SEL.delete(id):SEL.add(id);selUI()}
+function selAll(){const all=VIS.length&&VIS.every(id=>SEL.has(id));VIS.forEach(id=>all?SEL.delete(id):SEL.add(id));selUI();renderList()}
+function bulkOpen(){if(!SEL.size){alert('Pilih barang dulu');return}
+  $('bk-cont').innerHTML='<option value="">(tidak diubah)</option><option value="-">(keluarkan dari wadah)</option>'+S.items.filter(x=>!SEL.has(x.id)).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>`<option value="${x.id}">${esc(x.name)} #${x.id}</option>`).join('');
+  $('bk').style.display='block';scrollTo(0,0)}
+function bulkApply(){const t=$('bk-type').value,k=$('bk-kat').value.trim(),c=$('bk-cat').value.trim(),l=$('bk-loc').value.trim(),w=$('bk-cont').value;
+  const L=S.items.filter(i=>SEL.has(i.id));if(!L.length)return;
+  L.forEach(i=>{if(t)i.type=t;if(k)i.kat=k;if(c)i.cat=c;if(l)i.loc=l;if(w)i.cont=w==='-'?'':+w});
+  if(k&&!S.kats.includes(k))S.kats.push(k);H('Ubah massal '+L.length+' barang (pilihan)');save();selOff();refresh()}
+function bulkDel(){if(!SEL.size){alert('Pilih barang dulu');return}const L=S.items.filter(i=>SEL.has(i.id));
+  if(!confirm('Hapus '+L.length+' barang? Bisa diurungkan beberapa detik.'))return;rmItems(L);save();selOff();refresh()}
+function grp(f){const m={};S.items.forEach(i=>{const k=f(i)||'(kosong)';m[k]=m[k]||[0,0,0];m[k][0]++;m[k][1]+=i.qty;m[k][2]+=(+i.price||0)*i.qty});return Object.entries(m).sort((a,b)=>b[1][1]-a[1][1])}
+function sumHtml(t,rows){return `<div class="nm" style="margin-top:12px">${t}</div>`+rows.map(([k,v])=>`<div class="top tag"><span>${esc(k)}</span><span>${v[0]} jenis, ${v[1]} unit${v[2]?', '+money(v[2]):''}</span></div>`).join('')}
+function renderSum(){$('sumcard').innerHTML=S.items.length?sumHtml('Per jenis',grp(i=>TL[i.type]||i.type))+sumHtml('Per kategori',grp(i=>i.kat))+sumHtml('Per lokasi',grp(i=>i.loc)):'<div class="tag" style="margin-top:6px">Belum ada barang.</div>'}
+function del(id){rmItem(S.items.find(i=>i.id===id));save();refresh()}
 function addSpecRow(k='',v=''){const d=document.createElement('div');d.className='row';
   d.innerHTML=`<input placeholder="nama spek" value="${esc(k)}"><input placeholder="isi" value="${esc(v)}"><button class="f0 d" onclick="this.parentNode.remove()">×</button>`;$('specs').appendChild(d)}
 function applyTpl(){const f=S.tpls[$('f-cat').value.trim()];if(!f)return;
   const have=[...$('specs').children].map(r=>r.children[0].value.trim());
   [...$('specs').children].forEach(r=>{if(!r.children[0].value&&!r.children[1].value)r.remove()});
   f.forEach(k=>{if(!have.includes(k))addSpecRow(k)})}
-function resetForm(){editId=null;$('ftitle').textContent='Tambah barang';$('f-name').value='';$('f-cat').value='';$('f-qty').value=1;$('f-type').value='storage';$('specs').innerHTML='';addSpecRow()}
+function resetForm(){editId=null;PH=[];renderThumbs();$('ftitle').textContent='Tambah barang';['f-name','f-cat','f-kat','f-loc','f-exp','f-note','f-unit','f-price','f-bought','f-min'].forEach(k=>$(k).value='');$('f-qty').value=1;$('f-type').value='storage';$('f-cond').value='';fillCont(0);$('f-cont').value='';$('specs').innerHTML='';addSpecRow()}
 function edit(id){const i=S.items.find(x=>x.id===id);editId=id;show('form');$('specs').innerHTML='';
-  $('ftitle').textContent='Ubah barang #'+id;$('f-name').value=i.name;$('f-type').value=i.type;$('f-cat').value=i.cat;$('f-qty').value=i.qty;
-  Object.entries(i.specs).forEach(([k,v])=>addSpecRow(k,v));addSpecRow()}
-function saveForm(){const name=$('f-name').value.trim();if(!name){alert('Nama barang wajib diisi');return}
+  $('ftitle').textContent='Ubah barang #'+id;$('f-name').value=i.name;$('f-type').value=i.type;$('f-cat').value=i.cat;$('f-kat').value=i.kat;$('f-loc').value=i.loc;$('f-exp').value=i.exp;$('f-note').value=i.note;$('f-qty').value=i.qty;
+  $('f-unit').value=i.unit;$('f-cond').value=i.cond;$('f-price').value=i.price;$('f-bought').value=i.bought;$('f-min').value=i.min;$('f-cont').value=i.cont;
+  Object.entries(i.specs).forEach(([k,v])=>addSpecRow(k,v));addSpecRow();
+  PH=(i.photos||[]).map(n=>({name:n,url:'',blob:null}));renderThumbs();PH.forEach(async p=>{try{p.url=await photoUrl(p.name);renderThumbs()}catch(e){}})}
+async function saveForm(){const name=$('f-name').value.trim();if(!name){alert('Nama barang wajib diisi');return}
   const specs={};[...$('specs').children].forEach(r=>{const k=r.children[0].value.trim(),v=r.children[1].value.trim();if(k&&v)specs[k]=v});
-  const o={name,type:$('f-type').value,cat:$('f-cat').value.trim(),qty:Math.max(0,parseInt($('f-qty').value)||0),specs};
-  if(editId){Object.assign(S.items.find(x=>x.id===editId),o)}else{S.items.push({id:S.next++,...o})}
+  const n=id=>$(id).value===''?'':+$(id).value;
+  const o={name,type:$('f-type').value,kat:$('f-kat').value.trim(),cat:$('f-cat').value.trim(),loc:$('f-loc').value.trim(),exp:$('f-exp').value,note:$('f-note').value.trim(),qty:Math.max(0,parseInt($('f-qty').value)||0),
+    unit:$('f-unit').value.trim(),cond:n('f-cond'),price:n('f-price'),bought:$('f-bought').value,min:n('f-min'),cont:n('f-cont'),specs,photos:PH.map(p=>p.name)};
+  try{for(const p of PH)if(p.blob)await IMG.put(p.name,p.blob)}catch(e){alert('Foto gagal disimpan: '+e);return}
+  if(o.kat&&!S.kats.includes(o.kat))S.kats.push(o.kat);
+  if(editId){const it=S.items.find(x=>x.id===editId);(it.photos||[]).filter(x=>!o.photos.includes(x)).forEach(x=>IMG.del(x).catch(()=>{}));Object.assign(it,o);H('Ubah #'+editId+' '+name)}else{const id=S.next++;S.items.push({id,...o});H('Tambah #'+id+' '+name)}
   save();resetForm();refresh();show('list')}
 function saveTpl(){const c=$('t-cat').value.trim(),f=$('t-fields').value.split(',').map(s=>s.trim()).filter(Boolean);
   if(!c||!f.length){alert('Isi sub kategori dan minimal satu kolom');return}S.tpls[c]=f;save();$('t-cat').value='';$('t-fields').value='';refresh()}
-function renderTpl(){const k=Object.keys(S.tpls);$('tpls').innerHTML=k.length?k.map(c=>`<div class="card"><div class="top"><span class="nm">${esc(c)}</span>
-  <span><button onclick="$('t-cat').value=${esc(JSON.stringify(c)).replace(/'/g,'&#39;')};$('t-fields').value='${esc(S.tpls[c].join(', ')).replace(/'/g,'&#39;')}';scrollTo(0,0)">Ubah</button> <button class="d" onclick="delTpl(${esc(JSON.stringify(JSON.stringify(c))).replace(/'/g,'&#39;')})">Hapus</button></span></div>
-  <div class="sp">${S.tpls[c].map(f=>`<span>${esc(f)}</span>`).join('')}</div></div>`).join(''):'<div class="empty">Belum ada template.</div>'}
-function delTpl(j){delete S.tpls[JSON.parse(j)];save();refresh()}
-function exportJson(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='inventaris-'+new Date().toISOString().slice(0,10)+'.json';a.click()}
+function renderTpl(){TK=[...new Set([...Object.keys(S.tpls),...S.items.map(i=>i.cat).filter(Boolean)])].sort();KK=katAll();
+  $('kats-list').innerHTML=KK.map((k,n)=>`<div class="card"><div class="top"><span class="nm">${esc(k)} <span class="tag">${S.items.filter(i=>i.kat===k).length} barang</span></span><span><button onclick="renK(${n})">Nama</button> <button class="d" onclick="delK(${n})">Hapus</button></span></div></div>`).join('');
+  $('tpls').innerHTML=TK.length?TK.map((c,n)=>`<div class="card"><div class="top"><span class="nm">${esc(c)}</span><span><button onclick="tplEd(${n})">Template</button> <button onclick="renC(${n})">Nama</button> <button class="d" onclick="delTpl(${n})">Hapus</button></span></div>
+  <div class="sp">${(S.tpls[c]||[]).length?S.tpls[c].map(f=>`<span>${esc(f)}</span>`).join(''):'<span>(tanpa template)</span>'}</div></div>`).join(''):'<div class="empty">Belum ada sub kategori.</div>'}
+function tplEd(n){const c=TK[n];$('t-cat').value=c;$('t-fields').value=(S.tpls[c]||[]).join(', ');scrollTo(0,0)}
+function delTpl(n){if(confirm('Hapus template '+TK[n]+'? Barang tidak ikut terhapus.')){delete S.tpls[TK[n]];save();refresh()}}
+function renC(n){const b=prompt('Nama baru sub kategori',TK[n]);if(b&&b.trim()&&b.trim()!==TK[n])ren('cat',TK[n],b.trim())}
+function renK(n){const b=prompt('Nama baru kategori',KK[n]);if(b&&b.trim()&&b.trim()!==KK[n])ren('kat',KK[n],b.trim())}
+function delK(n){if(confirm('Hapus kategori '+KK[n]+'? Barangnya jadi tanpa kategori.')){S.items.forEach(i=>{if(i.kat===KK[n])i.kat=''});S.kats=S.kats.filter(k=>k!==KK[n]);H('Hapus kategori '+KK[n]);save();refresh()}}
+function addK(){const v=$('k-new').value.trim();if(!v)return;if(!S.kats.includes(v))S.kats.push(v);$('k-new').value='';save();refresh()}
+async function exportJson(full){const D=JSON.parse(JSON.stringify(S));
+  if(full){D.photosData={};for(const i of S.items)for(const n of i.photos||[]){const b=await IMG.get(n);if(b)D.photosData[n]=await new Promise(ok=>{const r=new FileReader();r.onload=()=>ok(r.result);r.readAsDataURL(b)})}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='inventaris-'+(full?'foto-':'')+new Date().toISOString().slice(0,10)+'.json';a.click()}
+async function restorePhotos(P){if(!P)return;for(const n in P){try{await IMG.put(n,await (await fetch(P[n])).blob())}catch(e){}}}
+/* Foto: folder InvenImage di penyimpanan privat aplikasi (OPFS), cadangan IndexedDB */
+const IMG={dir:null,db:null,
+ async open(){if(this.dir||this.db)return;try{if(!navigator.storage||!navigator.storage.getDirectory||!window.FileSystemFileHandle||!FileSystemFileHandle.prototype.createWritable)throw 0;
+   this.dir=await (await navigator.storage.getDirectory()).getDirectoryHandle('InvenImage',{create:true})}
+  catch(e){this.db=await new Promise((ok,no)=>{const q=indexedDB.open('InvenImage',1);q.onupgradeneeded=()=>q.result.createObjectStore('f');q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)})}},
+ tx(m,f){return new Promise((ok,no)=>{const t=this.db.transaction('f',m),r=f(t.objectStore('f'));t.oncomplete=()=>ok(r.result);t.onerror=()=>no(t.error)})},
+ async put(n,b){await this.open();if(this.dir){const h=await this.dir.getFileHandle(n,{create:true}),w=await h.createWritable();await w.write(b);await w.close()}else await this.tx('readwrite',s=>s.put(b,n))},
+ async get(n){await this.open();if(this.dir){try{return await (await this.dir.getFileHandle(n)).getFile()}catch(e){return null}}return (await this.tx('readonly',s=>s.get(n)))||null},
+ async del(n){await this.open();if(this.dir){try{await this.dir.removeEntry(n)}catch(e){}}else await this.tx('readwrite',s=>s.delete(n))}};
+async function squash(file){const bm=await createImageBitmap(file).catch(()=>null);
+  const src=bm||await new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src=URL.createObjectURL(file)});
+  let out=null;for(const [m,q] of [[1024,.72],[800,.6],[640,.5],[480,.45]]){const k=Math.min(1,m/Math.max(src.width,src.height)),c=document.createElement('canvas');
+    c.width=Math.round(src.width*k);c.height=Math.round(src.height*k);c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+    out=await new Promise(ok=>c.toBlob(ok,'image/jpeg',q));if(out&&out.size<=150000)break}
+  return out}
+let PH=[];const URLC={};
+async function photoUrl(n){if(URLC[n])return URLC[n];const b=await IMG.get(n);return b?(URLC[n]=URL.createObjectURL(b)):''}
+function loadThumbs(){document.querySelectorAll('img[data-p]').forEach(async im=>{try{const u=await photoUrl(im.dataset.p);if(u)im.src=u}catch(e){}})}
+function big(im){if(!im.src)return;$('ovi').src=im.src;$('ov').style.display='flex'}
+async function addPhotos(el){for(const f of [...el.files]){try{const b=await squash(f);PH.push({name:Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.jpg',blob:b,url:URL.createObjectURL(b)})}catch(e){alert('Foto tidak bisa diproses (format tidak didukung?)')}}el.value='';renderThumbs()}
+function renderThumbs(){$('thumbs').innerHTML=PH.map((p,n)=>`<div style="position:relative"><img class="th" src="${p.url}"><button class="d" style="position:absolute;top:-6px;right:-6px;padding:0 7px;border-radius:99px" onclick="PH.splice(${n},1);renderThumbs()">×</button></div>`).join('')}
 function importJson(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);
-  if(!Array.isArray(d.items))throw 0;if(!confirm('Ganti semua data saat ini dengan isi file?'))return;S={items:d.items,tpls:d.tpls||{},next:d.next||(Math.max(0,...d.items.map(i=>i.id))+1)};save();refresh();alert('Impor berhasil')}catch(e){alert('File tidak valid')}};r.readAsText(f);el.value=''}
+  if(!Array.isArray(d.items))throw 0;if(!confirm('Ganti semua data saat ini dengan isi file?'))return;S={items:d.items,tpls:d.tpls||{},next:d.next||(Math.max(0,...d.items.map(i=>i.id))+1),kats:d.kats||[],log:d.log||[],kinit:1};norm();save();refresh();restorePhotos(d.photosData).then(()=>{refresh();alert('Impor berhasil')})}catch(e){alert('File tidak valid')}};r.readAsText(f);el.value=''}
 
 /* CLI */
 let Q=null;
 function log(t,cls){if(Q){Q.push(t);return}const o=$('out');o.textContent+=(o.textContent?'\n':'')+t;o.scrollTop=o.scrollHeight}
 const tok=s=>(s.match(/(?:[^\s="]+="[^"]*"|"[^"]*"|\S+)/g)||[]).map(t=>t.replace(/"/g,''));
-const TM={s:'storage',storage:'storage',d:'daily',daily:'daily',o:'other',other:'other'};
+const TM={s:'storage',storage:'storage',d:'daily',daily:'daily',o:'other',other:'other',t:'throw',throw:'throw',throwable:'throw'};
+const RK=['type','cat','qty','kat','exp','loc','note','cond','unit','price','bought','min','cont'];
 function kv(a){const o={},p=[];a.forEach(t=>{const i=t.indexOf('=');i>0?o[t.slice(0,i)]=t.slice(i+1):p.push(t)});return{o,p}}
-function fmt(i){const s=Object.entries(i.specs).map(([k,v])=>k+'='+v).join(', ');return `#${i.id} ${i.name} [${i.type}${i.cat?'/'+i.cat:''}] x${i.qty}${s?' | '+s:''}`}
+function fmt(i){const s=Object.entries(i.specs).map(([k,v])=>k+'='+v).join(', ');return `#${i.id} ${i.name} [${i.type}${i.kat?'/'+i.kat:''}${i.cat?'/'+i.cat:''}] x${i.qty}${i.unit?' '+i.unit:''}${i.loc?' @'+i.loc:''}${i.cont?' in#'+i.cont:''}${i.cond!==''?' kond:'+i.cond:''}${i.exp?' exp:'+i.exp:''}${s?' | '+s:''}`}
+const nm=v=>v===''||v===undefined||isNaN(+v)?'':+v;
+function applySet(i,o){Object.entries(o).forEach(([k,v])=>{if(k==='name')i.name=v;else if(k==='qty')i.qty=Math.max(0,parseInt(v)||0);
+  else if(k==='type'){if(TM[v.toLowerCase()])i.type=TM[v.toLowerCase()]}else if(k==='cond'||k==='cont')i[k]=v===''?'':+v;else if(k==='price'||k==='min')i[k]=nm(v);
+  else if(['cat','kat','loc','exp','note','unit','bought'].includes(k))i[k]=v;else if(v==='')delete i.specs[k];else i.specs[k]=v});
+  if(i.kat&&!S.kats.includes(i.kat))S.kats.push(i.kat)}
+function chk(o){const D=/^\d{4}-\d{2}-\d{2}$/;if(o.exp&&!D.test(o.exp))return'exp harus YYYY-MM-DD';if(o.bought&&!D.test(o.bought))return'bought harus YYYY-MM-DD';
+  if(o.cond&&!(/^\d+$/.test(o.cond)&&o.cond>=1&&o.cond<=10))return'cond harus 1-10';if(o.cont&&!S.items.some(x=>x.id===+o.cont))return'cont: id wadah tidak ada';return''}
+function ren(t,a,b){let n=0;S.items.forEach(i=>{if(i[t]===a){i[t]=b;n++}});
+  if(t==='kat')S.kats=[...new Set(S.kats.map(k=>k===a?b:k))];else if(S.tpls[a]){S.tpls[b]=S.tpls[a];delete S.tpls[a]}
+  H('Ganti nama '+t+' '+a+' → '+b+' ('+n+' barang)');save();refresh();return 'OK '+n+' barang diubah'}
 function run(line){if(line.trim().startsWith('#'))return;const a=tok(line.trim());if(!a.length)return;const c=a.shift().toLowerCase(),{o,p}=kv(a);
   const find=id=>S.items.find(i=>i.id===parseInt(id));
-  if(c==='help')return log(`add "Nama" type=s|d|o cat=SSD qty=2 spek=isi ...
-ls [kata] [type=s|d|o]     daftar barang
-set <id> key=val ...       ubah (name,type,cat,qty atau spek)
-qty <id> <n|+n|-n>         atur jumlah
-rm <id>                    hapus
+  const er=chk(o);if(er)return log('Error: '+er);
+  if(c==='help')return log(`add "Nama" type=s|d|o|t kat=Kelistrikan cat=Adaptor qty=2 loc=Rak1 exp=2027-01-31 note=... unit=pcs cond=1-10 price=25000 bought=2026-10-01 min=2 cont=<id wadah> spek=isi
+  ren kat|cat <lama> <baru>   ganti nama kategori/sub kategori
+  type: s=storage d=daily o=other t=throwable
+ls [kata] [type=s|d|o|t]    daftar (ls exp = yang punya tanggal exp)
+set <id> key=val ...        ubah; key= kosong = hapus
+mset <sub kategori|*> key=val ...   ubah semua barang di sub kategori itu
+qty <id> <n|+n|-n>  |  rm <id>
 tpl ls | tpl add SSD kapasitas,interface | tpl rm SSD
-stats                      ringkasan
-export                     cetak JSON
-clear                      bersihkan layar`);
+kat ls | kat add Nama | kat rm Nama
+undo (urungkan hapus, 12 detik) | stats | export | reset yes | clear`);
   if(c==='clear'){$('out').textContent='';return}
-  if(c==='add'){const name=p[0];if(!name)return log('Error: nama kosong. Contoh: add "SSD 1TB" type=s cat=SSD qty=2 kapasitas=1TB');
-    const type=TM[(o.type||'s').toLowerCase()];if(!type)return log('Error: type harus s/d/o (storage/daily/other)');
-    const specs={};Object.keys(o).forEach(k=>{if(!['type','cat','qty'].includes(k))specs[k]=o[k]});
-    const it={id:S.next++,name,type,cat:o.cat||'',qty:o.qty===undefined?1:Math.max(0,parseInt(o.qty)||0),specs};S.items.push(it);save();refresh();
+  if(c==='add'){const name=p[0];if(!name)return log('Error: nama kosong. Contoh: add "SSD 1TB" type=s kat=Komputer cat=SSD qty=2 kapasitas=1TB');
+    const type=TM[(o.type||'s').toLowerCase()];if(!type)return log('Error: type harus s/d/o/t (storage/daily/other/throwable)');
+    const specs={};Object.keys(o).forEach(k=>{if(!RK.includes(k))specs[k]=o[k]});
+    const it={id:S.next++,photos:[],name,type,kat:o.kat||'',cat:o.cat||'',loc:o.loc||'',exp:o.exp||'',note:o.note||'',cond:o.cond?+o.cond:'',unit:o.unit||'',price:nm(o.price),bought:o.bought||'',min:nm(o.min),cont:o.cont?+o.cont:'',qty:o.qty===undefined?1:Math.max(0,parseInt(o.qty)||0),specs};
+    if(it.kat&&!S.kats.includes(it.kat)&&!DK.includes(it.kat))S.kats.push(it.kat);S.items.push(it);H('Tambah #'+it.id+' '+it.name);save();refresh();
     const miss=(S.tpls[it.cat]||[]).filter(f=>!(f in specs));log('OK '+fmt(it)+(miss.length?'\nTemplate '+it.cat+' belum terisi: '+miss.join(', '):''));return}
   if(c==='ls'){const q=p.join(' ').toLowerCase(),t=o.type?TM[o.type.toLowerCase()]:null;
     const L=S.items.filter(i=>(!t||i.type===t)&&(!q||fmt(i).toLowerCase().includes(q)));return log(L.length?L.map(fmt).join('\n'):'(kosong)')}
-  if(c==='set'){const i=find(p[0]);if(!i)return log('Error: id tidak ada');
-    Object.entries(o).forEach(([k,v])=>{if(k==='name')i.name=v;else if(k==='cat')i.cat=v;else if(k==='qty')i.qty=Math.max(0,parseInt(v)||0);
-      else if(k==='type'&&TM[v])i.type=TM[v];else if(v==='')delete i.specs[k];else i.specs[k]=v});save();refresh();return log('OK '+fmt(i))}
+  if(c==='set'){const i=find(p[0]);if(!i)return log('Error: id tidak ada');applySet(i,o);H('Ubah #'+i.id+' '+i.name+': '+Object.keys(o).join(','));save();refresh();return log('OK '+fmt(i))}
+  if(c==='mset'){const f=(p[0]||'').toLowerCase();if(!f||!Object.keys(o).length)return log('Error: mset <sub kategori|*> key=val ...');
+    const L=S.items.filter(i=>f==='*'||i.cat.toLowerCase()===f);if(!L.length)return log('Error: tidak ada barang dengan sub kategori '+p[0]);
+    L.forEach(i=>applySet(i,o));H('Ubah massal '+L.length+' barang ('+p[0]+'): '+Object.keys(o).join(','));save();refresh();return log('OK '+L.length+' barang diubah ('+p[0]+')')}
   if(c==='qty'){const i=find(p[0]);if(!i||!p[1])return log('Error: qty <id> <n|+n|-n>');const n=parseInt(p[1]);
-    i.qty=Math.max(0,/^[+-]/.test(p[1])?i.qty+n:n);save();refresh();return log('OK '+fmt(i))}
-  if(c==='rm'){const i=find(p[0]);if(!i)return log('Error: id tidak ada');S.items=S.items.filter(x=>x!==i);save();refresh();return log('Dihapus: '+i.name)}
+    const old=i.qty;i.qty=Math.max(0,/^[+-]/.test(p[1])?i.qty+n:n);H('Jumlah #'+i.id+' '+i.name+': '+old+' → '+i.qty);save();refresh();return log('OK '+fmt(i))}
+  if(c==='rm'){const i=find(p[0]);if(!i)return log('Error: id tidak ada');rmItem(i);save();refresh();return log('Dihapus: '+i.name+' (ketik undo dalam 12 detik untuk membatalkan)')}
   if(c==='tpl'){const s=(p.shift()||'').toLowerCase();
     if(s==='ls')return log(Object.keys(S.tpls).map(k=>k+': '+S.tpls[k].join(', ')).join('\n')||'(belum ada template)');
     if(s==='add'){const n=p.shift(),f=p.join('').split(',').map(x=>x.trim()).filter(Boolean);if(!n||!f.length)return log('Error: tpl add <kategori> f1,f2');S.tpls[n]=f;save();refresh();return log('Template '+n+': '+f.join(', '))}
     if(s==='rm'){delete S.tpls[p[0]];save();refresh();return log('OK')}return log('Error: tpl ls|add|rm')}
-  if(c==='stats'){const by={};S.items.forEach(i=>by[i.type]=(by[i.type]||0)+i.qty);return log(`${S.items.length} jenis, ${S.items.reduce((a,i)=>a+i.qty,0)} unit\n`+Object.keys(TL).map(t=>TL[t]+': '+(by[t]||0)).join('\n'))}
+  if(c==='undo'){if(!UNDO)return log('Tidak ada yang bisa diurungkan');const n=UNDO.L.length;undoDel();return log('Dikembalikan: '+n+' barang')}
+  if(c==='ren'){const t=(p[0]||'').toLowerCase();if(!['kat','cat'].includes(t)||!p[1]||!p[2])return log('Error: ren kat|cat <lama> <baru>');return log(ren(t,p[1],p[2]))}
+  if(c==='kat'){const s=(p.shift()||'').toLowerCase();
+    if(s==='ls')return log(katAll().join(', '));
+    if(s==='add'&&p[0]){if(!S.kats.includes(p[0]))S.kats.push(p[0]);save();refresh();return log('Kategori ditambah: '+p[0])}
+    if(s==='rm'&&p[0]){S.kats=S.kats.filter(k=>k!==p[0]);save();refresh();return log('Dihapus dari daftar saran: '+p[0])}return log('Error: kat ls|add|rm')}
+  if(c==='stats'){const by={};S.items.forEach(i=>by[i.type]=(by[i.type]||0)+i.qty);const ex=S.items.filter(i=>{const d=dleft(i.exp);return d!==null&&d<0}).length,so=S.items.filter(i=>{const d=dleft(i.exp);return d!==null&&d>=0&&d<=30}).length;
+    return log(`${S.items.length} jenis, ${S.items.reduce((a,i)=>a+i.qty,0)} unit\n`+Object.keys(TL).map(t=>TL[t]+': '+(by[t]||0)).join('\n')+`\nKadaluarsa: ${ex}, segera (<=30 hari): ${so}`)}
   if(c==='export')return log(JSON.stringify(S));
+  if(c==='reset'){if(p[0]!=='yes')return log('Ketik: reset yes (menghapus SEMUA barang; template tetap)');S.items.forEach(i=>(i.photos||[]).forEach(n=>IMG.del(n).catch(()=>{})));S.items=[];S.next=1;save();refresh();return log('Semua barang dihapus')}
   log('Perintah tidak dikenal. Ketik help')}
 $('cmd').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value;if(!v.trim())return;log('> '+v);run(v);e.target.value=''}});
 function batch(t){const L=t.split(/\r?\n/).filter(l=>l.trim()&&!l.trim().startsWith('#'));Q=[];L.forEach(run);const E=Q.filter(x=>/^(Error|Perintah)/.test(x));Q=null;
@@ -194,5 +334,6 @@ function batch(t){const L=t.split(/\r?\n/).filter(l=>l.trim()&&!l.trim().startsW
 function runBulk(){const t=$('bulk').value;if(!t.trim()){alert('Kotak masih kosong');return}log('> [batch '+t.trim().split(/\r?\n/).length+' baris]');batch(t);$('bulk').value='';refresh()}
 $('cmd').addEventListener('paste',e=>{const t=(e.clipboardData||window.clipboardData).getData('text');if(!/\n/.test(t.trim()))return;e.preventDefault();log('> [paste '+t.trim().split(/\r?\n/).length+' baris]');batch(t)});
 refresh();
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
