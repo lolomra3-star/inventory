@@ -14,7 +14,7 @@ body{font:15px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--tx);pa
 main{max-width:640px;margin:0 auto;padding:12px}
 h1{font-size:18px;margin:4px 0 2px}.sum{color:var(--mu);font-size:13px;margin-bottom:10px}
 input,select,button,textarea{font:inherit;color:inherit}
-input,select{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--card);margin:3px 0 10px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--card);margin:3px 0 10px}
 button{border:1px solid var(--bd);background:var(--card);border-radius:8px;padding:8px 12px;cursor:pointer}
 button.p{background:var(--ac);border-color:var(--ac);color:#fff}
 @media(prefers-color-scheme:dark){button.p{color:#0b1220}}
@@ -41,7 +41,7 @@ nav button.on{color:var(--ac);font-weight:700}
 .chips button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 @media(prefers-color-scheme:dark){.chips button.on{color:#0b1220}}
 </style></head><body><main>
-<h1>Inventaris</h1><div class="sum" id="sum"></div>
+<h1>Inventaris <small style="font-weight:400;color:var(--mu)">v3</small></h1><div class="sum" id="sum"></div>
 
 <section class="v on" id="v-list">
   <input id="q" placeholder="Cari nama, kategori, spek…" oninput="renderList()">
@@ -78,6 +78,10 @@ nav button.on{color:var(--ac);font-weight:700}
 <section class="v" id="v-cli">
   <div id="out"></div>
   <input id="cmd" placeholder="ketik perintah, mis. help" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false">
+  <div class="card" style="margin-top:12px"><b>Tempel banyak perintah</b>
+    <div class="tag" style="margin:4px 0 8px">Satu perintah per baris. Baris berawalan # diabaikan.</div>
+    <textarea id="bulk" rows="6" placeholder="tempel di sini" autocapitalize="off" autocorrect="off" spellcheck="false" style="font-family:ui-monospace,Menlo,monospace;font-size:13px"></textarea>
+    <button class="p" onclick="runBulk()">Jalankan semua</button></div>
 </section>
 
 <section class="v" id="v-data">
@@ -187,6 +191,7 @@ clear                      bersihkan layar`);
 $('cmd').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value;if(!v.trim())return;log('> '+v);run(v);e.target.value=''}});
 function batch(t){const L=t.split(/\r?\n/).filter(l=>l.trim()&&!l.trim().startsWith('#'));Q=[];L.forEach(run);const E=Q.filter(x=>/^(Error|Perintah)/.test(x));Q=null;
   log(`Batch selesai: ${L.length} perintah, ${E.length} error. Total ${S.items.length} jenis barang.`+(E.length?'\n'+E.join('\n'):''))}
+function runBulk(){const t=$('bulk').value;if(!t.trim()){alert('Kotak masih kosong');return}log('> [batch '+t.trim().split(/\r?\n/).length+' baris]');batch(t);$('bulk').value='';refresh()}
 $('cmd').addEventListener('paste',e=>{const t=(e.clipboardData||window.clipboardData).getData('text');if(!/\n/.test(t.trim()))return;e.preventDefault();log('> [paste '+t.trim().split(/\r?\n/).length+' baris]');batch(t)});
 refresh();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
