@@ -44,7 +44,7 @@ input.ck{width:20px;height:20px;margin:0 8px 0 0;flex:none;vertical-align:middle
 .chips button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 @media(prefers-color-scheme:dark){.chips button.on{color:#0b1220}}
 </style></head><body><main>
-<h1>Inventaris <small style="font-weight:400;color:var(--mu)">v7</small></h1><div class="sum" id="sum"></div>
+<h1>Inventaris <small style="font-weight:400;color:var(--mu)">v9</small></h1><div class="sum" id="sum"></div>
 
 <section class="v on" id="v-list">
   <div class="row"><input id="q" placeholder="Cari nama, kategori, spek…" oninput="renderList()"><button class="f0" id="selbtn" onclick="selToggle()" style="margin-bottom:7px">Pilih</button></div>
@@ -64,6 +64,7 @@ input.ck{width:20px;height:20px;margin:0 8px 0 0;flex:none;vertical-align:middle
     <label>Nama barang</label><input id="f-name">
     <label>Jenis</label>
     <select id="f-type"><option value="storage">Storage (disimpan, belum ada rencana)</option><option value="daily">Daily Use (dipakai tiap hari)</option><option value="other">Other Use (dipakai sesekali)</option><option value="throw">Throwable (akan dibuang)</option></select>
+    <label class="ckl" style="display:flex;align-items:center;margin:2px 0 12px"><input type="checkbox" id="f-wadah" class="ck" onchange="onWadah()"> Ini wadah/kotak (bisa diisi barang lain)</label>
     <label>Kategori (pilih atau ketik baru)</label>
     <input id="f-kat" list="kats"><datalist id="kats"></datalist>
     <label>Sub kategori (ketik sendiri)</label>
@@ -77,8 +78,10 @@ input.ck{width:20px;height:20px;margin:0 8px 0 0;flex:none;vertical-align:middle
     <label>Harga satuan (opsional)</label><input id="f-price" type="number" min="0" inputmode="decimal">
     <label>Tanggal beli (opsional)</label><input id="f-bought" type="date">
     <label>Stok minimum (opsional)</label><input id="f-min" type="number" min="0" inputmode="numeric">
-    <label>Di dalam wadah/kotak (opsional)</label><select id="f-cont"></select>
-    <label>Foto (opsional, otomatis dikompres)</label><input id="f-photo" type="file" accept="image/*" multiple onchange="addPhotos(this)"><div id="thumbs" style="display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px"></div>
+    <label>Di dalam wadah/kotak (opsional)</label><select id="f-cont" onchange="contNew(this)"></select>
+    <label>Foto (opsional, otomatis dikompres)</label><div class="row"><button class="p" onclick="camOpen()">Ambil foto (kamera)</button><button class="f0" onclick="$('f-photo').click()">Galeri</button></div>
+    <input id="f-photo" type="file" accept="image/*" multiple onchange="addPhotos(this)" style="display:none">
+    <input id="f-cam" type="file" accept="image/*" capture="environment" onchange="addPhotos(this)" style="display:none"><div id="thumbs" style="display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px"></div>
     <label>Spek</label><div id="specs"></div>
     <button class="f0" onclick="addSpecRow()">+ Spek</button>
     <div class="row" style="margin-top:12px"><button class="p" onclick="saveForm()">Simpan</button><button onclick="resetForm();show('list')">Batal</button></div>
@@ -91,7 +94,7 @@ input.ck{width:20px;height:20px;margin:0 8px 0 0;flex:none;vertical-align:middle
   <div id="kats-list"></div>
   <div class="card">
     <b>Template spek</b>
-    <div class="tag" style="margin:4px 0 10px">Tiap sub kategori bisa punya daftar kolom spek yang otomatis muncul saat input.</div>
+    <div class="tag" style="margin:4px 0 10px">Tiap sub kategori bisa punya daftar kolom spek yang otomatis muncul saat input. Template bernama Wadah dipakai otomatis saat barang ditandai sebagai wadah; buat template lain (mis. Tupperware) untuk jenis wadah berbeda.</div>
     <label>Sub kategori</label><input id="t-cat" placeholder="mis. SSD">
     <label>Kolom spek (pisah koma)</label><input id="t-fields" placeholder="kapasitas, interface, merek">
     <button class="p" onclick="saveTpl()">Simpan template</button>
@@ -119,6 +122,13 @@ input.ck{width:20px;height:20px;margin:0 8px 0 0;flex:none;vertical-align:middle
 </main>
 <div id="selbar" style="display:none;position:fixed;left:0;right:0;bottom:calc(50px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--bd);padding:8px 10px;gap:6px;align-items:center;z-index:30;flex-wrap:wrap"><span id="selc" class="tag" style="flex:1">0 dipilih</span><button onclick="selAll()">Semua</button><button onclick="bulkOpen()">Ubah</button><button class="d" onclick="bulkDel()">Hapus</button></div>
 <div id="undo" style="display:none;position:fixed;left:12px;right:12px;bottom:calc(60px + env(safe-area-inset-bottom));background:#222;color:#fff;border-radius:10px;padding:10px 14px;z-index:40;align-items:center;justify-content:space-between"><span id="undotxt"></span><button onclick="undoDel()" style="background:none;border:0;color:#6aa6ff;font-weight:700">Urungkan</button></div>
+<div id="cam" style="display:none;position:fixed;inset:0;background:#000;z-index:60;flex-direction:column;padding-top:env(safe-area-inset-top)">
+  <video id="camv" autoplay playsinline muted style="flex:1;min-height:0;width:100%;object-fit:cover"></video>
+  <div style="display:flex;align-items:center;justify-content:space-around;padding:14px 10px calc(14px + env(safe-area-inset-bottom));background:#000">
+    <button onclick="camSwitch()" style="background:#222;color:#fff;border-color:#444">Balik</button>
+    <button onclick="camShot()" aria-label="Jepret" style="width:68px;height:68px;border-radius:50%;background:#fff;border:4px solid #888;padding:0"></button>
+    <button onclick="camClose()" style="background:#222;color:#fff;border-color:#444">Selesai <span id="camn"></span></button>
+  </div></div>
 <div id="ov" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:50;align-items:center;justify-content:center"><img id="ovi" style="max-width:96%;max-height:92%;border-radius:8px"></div>
 <nav>
   <button class="on" data-v="list" onclick="show('list')">Barang</button>
@@ -133,7 +143,9 @@ const DK=['Kelistrikan','Komputer','Jaringan','Alat','Alat tulis','Makanan/Minum
 let S={items:[],tpls:{},next:1,kats:[],log:[]},filt='all',kfilt='',sfilt='',editId=null,KL=[],TK=[],KK=[],UNDO=null,UT=0,SEL=new Set(),selMode=false,VIS=[];
 try{const r=localStorage.getItem('inv1');if(r)S=JSON.parse(r)}catch(e){}
 function norm(){S.kats=S.kats||[];S.log=S.log||[];S.tpls=S.tpls||{};if(!S.kinit){S.kats=[...new Set([...DK,...S.kats])];S.kinit=1}
-  S.items.forEach(i=>{['kat','cat','exp','loc','note','unit','bought','cond','price','min','cont'].forEach(k=>{if(i[k]===undefined||i[k]===null)i[k]=''});i.specs=i.specs||{};i.photos=i.photos||[]})}
+  S.items.forEach(i=>{['kat','cat','exp','loc','note','unit','bought','cond','price','min','cont'].forEach(k=>{if(i[k]===undefined||i[k]===null)i[k]=''});i.specs=i.specs||{};i.photos=i.photos||[];i.wadah=!!i.wadah});
+  S.items.forEach(i=>{if(i.cont){const w=S.items.find(x=>x.id===i.cont);if(w)w.wadah=true}});
+  if(!S.wInit){if(!S.tpls['Wadah'])S.tpls['Wadah']=['warna','ukuran','bentuk','bahan'];S.wInit=1}}
 norm();
 function save(){try{localStorage.setItem('inv1',JSON.stringify(S))}catch(e){alert('Gagal menyimpan ke penyimpanan browser')}}
 const $=id=>document.getElementById(id);
@@ -155,22 +167,27 @@ function dleft(e){if(!e)return null;return Math.ceil((new Date(e+'T00:00:00')-ne
 function exBadge(e){const d=dleft(e);if(d===null)return'';return d<0?`<span class="ex bad">Kadaluarsa ${-d} hari lalu</span>`:d<=30?`<span class="ex warn">Sisa ${d} hari</span>`:`<span class="ex">Exp ${esc(e)}</span>`}
 const lowQ=i=>i.min!==''&&i.qty<=i.min;
 const money=n=>'Rp '+(+n).toLocaleString('id-ID');
-function fillCont(self){$('f-cont').innerHTML='<option value="">(tidak di dalam wadah)</option>'+S.items.filter(x=>x.id!==self).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>`<option value="${x.id}">${esc(x.name)} #${x.id}</option>`).join('')}
+function descs(id){const out=new Set([id]);let ch=true;while(ch){ch=false;S.items.forEach(x=>{if(x.cont&&out.has(x.cont)&&!out.has(x.id)){out.add(x.id);ch=true}})}return out}
+function fillCont(self){const ex=self?descs(self):new Set();$('f-cont').innerHTML='<option value="">(tidak di dalam wadah)</option>'+S.items.filter(x=>x.wadah&&!ex.has(x.id)).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>`<option value="${x.id}">${esc(x.name)} #${x.id}</option>`).join('')+'<option value="new">+ Buat wadah baru…</option>'}
+function onWadah(){if($('f-wadah').checked){if(!$('f-cat').value.trim())$('f-cat').value='Wadah';applyTpl()}}
+function contNew(el){if(el.value!=='new')return;const n=(prompt('Nama wadah baru (mis. Tupperware A)')||'').trim();if(!n){el.value='';return}
+  const id=S.next++;S.items.push({id,name:n,type:'storage',kat:'',cat:'Wadah',loc:'',exp:'',note:'',unit:'',cond:'',price:'',bought:'',min:'',cont:'',qty:1,specs:{},photos:[],wadah:true});
+  H('Tambah wadah #'+id+' '+n);save();refresh();fillCont(editId||0);el.value=id;alert('Wadah dibuat. Isi warna/ukuran-nya lewat tombol Ubah di daftar barang.')}
 function renderList(){
   const q=$('q').value.toLowerCase();
-  $('chips').innerHTML=['all','storage','daily','other','throw','exp','low'].map(t=>`<button class="${filt===t?'on':''}" onclick="filt='${t}';renderList()">${t==='all'?'Semua':t==='exp'?'Exp':t==='low'?'Menipis':TL[t]}</button>`).join('');
+  $('chips').innerHTML=['all','storage','daily','other','throw','wadah','exp','low'].map(t=>`<button class="${filt===t?'on':''}" onclick="filt='${t}';renderList()">${t==='all'?'Semua':t==='exp'?'Exp':t==='low'?'Menipis':t==='wadah'?'Wadah':TL[t]}</button>`).join('');
   KL=[...new Set(S.items.map(i=>i.kat).filter(Boolean))].sort();
   const SL=[...new Set(S.items.filter(i=>!kfilt||i.kat===kfilt).map(i=>i.cat).filter(Boolean))].sort();
   if(sfilt&&!SL.includes(sfilt))sfilt='';
   $('fk').innerHTML='<option value="">Semua kategori</option>'+KL.map(k=>`<option value="${esc(k)}"${k===kfilt?' selected':''}>${esc(k)}</option>`).join('');
   $('fs').innerHTML='<option value="">Semua sub kategori</option>'+SL.map(k=>`<option value="${esc(k)}"${k===sfilt?' selected':''}>${esc(k)}</option>`).join('');
   const nv=x=>x===''?1e9:x,so=$('sort').value;
-  const L=S.items.filter(i=>{const d=dleft(i.exp);return(filt==='all'||(filt==='exp'?d!==null&&d<=30:filt==='low'?lowQ(i):i.type===filt))&&(!kfilt||i.kat===kfilt)&&(!sfilt||i.cat===sfilt)&&(!q||(i.name+' '+i.kat+' '+i.cat+' '+i.loc+' '+i.note+' '+Object.entries(i.specs).map(e=>e.join(' ')).join(' ')).toLowerCase().includes(q))});
+  const L=S.items.filter(i=>{const d=dleft(i.exp);return(filt==='all'||(filt==='exp'?d!==null&&d<=30:filt==='low'?lowQ(i):filt==='wadah'?i.wadah:i.type===filt))&&(!kfilt||i.kat===kfilt)&&(!sfilt||i.cat===sfilt)&&(!q||(i.name+' '+i.kat+' '+i.cat+' '+i.loc+' '+i.note+' '+Object.entries(i.specs).map(e=>e.join(' ')).join(' ')).toLowerCase().includes(q))});
   L.sort(so==='new'?(a,b)=>b.id-a.id:so==='name'?(a,b)=>a.name.localeCompare(b.name):so==='qty'?(a,b)=>b.qty-a.qty:so==='exp'?(a,b)=>(dleft(a.exp)??1e9)-(dleft(b.exp)??1e9):so==='cond'?(a,b)=>nv(a.cond)-nv(b.cond):so==='val'?(a,b)=>(b.qty*(+b.price||0))-(a.qty*(+a.price||0)):(a,b)=>a.id-b.id);
   VIS=L.map(i=>i.id);$('list').innerHTML=L.length?L.map(i=>{const C=i.cont?S.items.find(x=>x.id===i.cont):null,K=S.items.filter(x=>x.cont===i.id),
     det=[i.cond!==''?'Kondisi '+i.cond+'/10':'',i.price!==''?money(i.price)+'/'+(i.unit||'pcs'):'',i.bought?'Beli '+i.bought:'',i.min!==''?'Min '+i.min:''].filter(Boolean);
     return `<div class="card t-${i.type}"><div class="top"><span class="nm">${selMode?`<input type="checkbox" class="ck" ${SEL.has(i.id)?'checked':''} onchange="tog(${i.id})">`:''}${esc(i.name)}</span><span class="tag">#${i.id}</span></div>
-  <div class="tag">${TL[i.type]||i.type}${i.kat?' / '+esc(i.kat):''}${i.cat?' / '+esc(i.cat):''}${i.loc?' | Lokasi: '+esc(i.loc):''} ${exBadge(i.exp)}${lowQ(i)?'<span class="ex warn">Stok menipis</span>':''}</div>
+  <div class="tag">${TL[i.type]||i.type}${i.kat?' / '+esc(i.kat):''}${i.cat?' / '+esc(i.cat):''}${i.loc?' | Lokasi: '+esc(i.loc):''} ${i.wadah?'<span class="ex">Wadah</span>':''}${exBadge(i.exp)}${lowQ(i)?'<span class="ex warn">Stok menipis</span>':''}</div>
   ${C?`<div class="tag">Di dalam: ${esc(C.name)} #${C.id}</div>`:''}${K.length?`<div class="tag">Isi (${K.length}): ${esc(K.map(x=>x.name).join(', '))}</div>`:''}
   ${det.length?`<div class="tag">${esc(det.join(' | '))}</div>`:''}
   ${Object.keys(i.specs).length?'<div class="sp">'+Object.entries(i.specs).map(([k,v])=>`<span>${esc(k)}: ${esc(v)}</span>`).join('')+'</div>':''}
@@ -192,8 +209,8 @@ function selToggle(){selMode=!selMode;SEL.clear();$('bk').style.display='none';s
 function selOff(){selMode=false;SEL.clear();$('bk').style.display='none';selUI();renderList()}
 function tog(id){SEL.has(id)?SEL.delete(id):SEL.add(id);selUI()}
 function selAll(){const all=VIS.length&&VIS.every(id=>SEL.has(id));VIS.forEach(id=>all?SEL.delete(id):SEL.add(id));selUI();renderList()}
-function bulkOpen(){if(!SEL.size){alert('Pilih barang dulu');return}
-  $('bk-cont').innerHTML='<option value="">(tidak diubah)</option><option value="-">(keluarkan dari wadah)</option>'+S.items.filter(x=>!SEL.has(x.id)).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>`<option value="${x.id}">${esc(x.name)} #${x.id}</option>`).join('');
+function bulkOpen(){if(!SEL.size){alert('Pilih barang dulu');return}const bx=new Set();SEL.forEach(id=>descs(id).forEach(v=>bx.add(v)));
+  $('bk-cont').innerHTML='<option value="">(tidak diubah)</option><option value="-">(keluarkan dari wadah)</option>'+S.items.filter(x=>x.wadah&&!bx.has(x.id)).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>`<option value="${x.id}">${esc(x.name)} #${x.id}</option>`).join('');
   $('bk').style.display='block';scrollTo(0,0)}
 function bulkApply(){const t=$('bk-type').value,k=$('bk-kat').value.trim(),c=$('bk-cat').value.trim(),l=$('bk-loc').value.trim(),w=$('bk-cont').value;
   const L=S.items.filter(i=>SEL.has(i.id));if(!L.length)return;
@@ -211,17 +228,18 @@ function applyTpl(){const f=S.tpls[$('f-cat').value.trim()];if(!f)return;
   const have=[...$('specs').children].map(r=>r.children[0].value.trim());
   [...$('specs').children].forEach(r=>{if(!r.children[0].value&&!r.children[1].value)r.remove()});
   f.forEach(k=>{if(!have.includes(k))addSpecRow(k)})}
-function resetForm(){editId=null;PH=[];renderThumbs();$('ftitle').textContent='Tambah barang';['f-name','f-cat','f-kat','f-loc','f-exp','f-note','f-unit','f-price','f-bought','f-min'].forEach(k=>$(k).value='');$('f-qty').value=1;$('f-type').value='storage';$('f-cond').value='';fillCont(0);$('f-cont').value='';$('specs').innerHTML='';addSpecRow()}
+function resetForm(){editId=null;PH=[];renderThumbs();$('ftitle').textContent='Tambah barang';['f-name','f-cat','f-kat','f-loc','f-exp','f-note','f-unit','f-price','f-bought','f-min'].forEach(k=>$(k).value='');$('f-qty').value=1;$('f-type').value='storage';$('f-cond').value='';$('f-wadah').checked=false;fillCont(0);$('f-cont').value='';$('specs').innerHTML='';addSpecRow()}
 function edit(id){const i=S.items.find(x=>x.id===id);editId=id;show('form');$('specs').innerHTML='';
   $('ftitle').textContent='Ubah barang #'+id;$('f-name').value=i.name;$('f-type').value=i.type;$('f-cat').value=i.cat;$('f-kat').value=i.kat;$('f-loc').value=i.loc;$('f-exp').value=i.exp;$('f-note').value=i.note;$('f-qty').value=i.qty;
-  $('f-unit').value=i.unit;$('f-cond').value=i.cond;$('f-price').value=i.price;$('f-bought').value=i.bought;$('f-min').value=i.min;$('f-cont').value=i.cont;
+  $('f-unit').value=i.unit;$('f-cond').value=i.cond;$('f-price').value=i.price;$('f-bought').value=i.bought;$('f-min').value=i.min;$('f-cont').value=i.cont;$('f-wadah').checked=!!i.wadah;
   Object.entries(i.specs).forEach(([k,v])=>addSpecRow(k,v));addSpecRow();
   PH=(i.photos||[]).map(n=>({name:n,url:'',blob:null}));renderThumbs();PH.forEach(async p=>{try{p.url=await photoUrl(p.name);renderThumbs()}catch(e){}})}
 async function saveForm(){const name=$('f-name').value.trim();if(!name){alert('Nama barang wajib diisi');return}
   const specs={};[...$('specs').children].forEach(r=>{const k=r.children[0].value.trim(),v=r.children[1].value.trim();if(k&&v)specs[k]=v});
   const n=id=>$(id).value===''?'':+$(id).value;
   const o={name,type:$('f-type').value,kat:$('f-kat').value.trim(),cat:$('f-cat').value.trim(),loc:$('f-loc').value.trim(),exp:$('f-exp').value,note:$('f-note').value.trim(),qty:Math.max(0,parseInt($('f-qty').value)||0),
-    unit:$('f-unit').value.trim(),cond:n('f-cond'),price:n('f-price'),bought:$('f-bought').value,min:n('f-min'),cont:n('f-cont'),specs,photos:PH.map(p=>p.name)};
+    unit:$('f-unit').value.trim(),cond:n('f-cond'),price:n('f-price'),bought:$('f-bought').value,min:n('f-min'),cont:n('f-cont'),specs,photos:PH.map(p=>p.name),wadah:!!$('f-wadah').checked};
+  if(!o.wadah&&editId&&S.items.some(x=>x.cont===editId)){alert('Wadah ini masih berisi barang. Keluarkan isinya dulu.');return}
   try{for(const p of PH)if(p.blob)await IMG.put(p.name,p.blob)}catch(e){alert('Foto gagal disimpan: '+e);return}
   if(o.kat&&!S.kats.includes(o.kat))S.kats.push(o.kat);
   if(editId){const it=S.items.find(x=>x.id===editId);(it.photos||[]).filter(x=>!o.photos.includes(x)).forEach(x=>IMG.del(x).catch(()=>{}));Object.assign(it,o);H('Ubah #'+editId+' '+name)}else{const id=S.next++;S.items.push({id,...o});H('Tambah #'+id+' '+name)}
@@ -251,17 +269,33 @@ const IMG={dir:null,db:null,
  async put(n,b){await this.open();if(this.dir){const h=await this.dir.getFileHandle(n,{create:true}),w=await h.createWritable();await w.write(b);await w.close()}else await this.tx('readwrite',s=>s.put(b,n))},
  async get(n){await this.open();if(this.dir){try{return await (await this.dir.getFileHandle(n)).getFile()}catch(e){return null}}return (await this.tx('readonly',s=>s.get(n)))||null},
  async del(n){await this.open();if(this.dir){try{await this.dir.removeEntry(n)}catch(e){}}else await this.tx('readwrite',s=>s.delete(n))}};
-async function squash(file){const bm=await createImageBitmap(file).catch(()=>null);
-  const src=bm||await new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src=URL.createObjectURL(file)});
-  let out=null;for(const [m,q] of [[1024,.72],[800,.6],[640,.5],[480,.45]]){const k=Math.min(1,m/Math.max(src.width,src.height)),c=document.createElement('canvas');
+async function shrink(src){let out=null;for(const [m,q] of [[1024,.72],[800,.6],[640,.5],[480,.45]]){const k=Math.min(1,m/Math.max(src.width,src.height)),c=document.createElement('canvas');
     c.width=Math.round(src.width*k);c.height=Math.round(src.height*k);c.getContext('2d').drawImage(src,0,0,c.width,c.height);
     out=await new Promise(ok=>c.toBlob(ok,'image/jpeg',q));if(out&&out.size<=150000)break}
   return out}
+async function squash(file){const bm=await createImageBitmap(file).catch(()=>null);
+  const src=bm||await new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src=URL.createObjectURL(file)});return shrink(src)}
+const pname=()=>Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.jpg';
+/* Kamera langsung di dalam aplikasi */
+let CS=null,CF='environment',CN=0;
+async function camStart(){camStop();CS=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:CF},width:{ideal:1600},height:{ideal:1200}},audio:false});$('camv').srcObject=CS;await Promise.resolve($('camv').play()).catch(()=>{})}
+function camStop(){if(CS){CS.getTracks().forEach(t=>t.stop());CS=null}}
+async function camOpen(){if(PH.length>=8){alert('Maksimal 8 foto per barang');return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('f-cam').click();return}
+  try{await camStart();CN=0;$('camn').textContent='';$('cam').style.display='flex'}
+  catch(e){camStop();alert('Kamera dalam aplikasi tidak bisa dibuka ('+(e.name||e)+'). Izinkan akses kamera di pengaturan browser, atau pakai kamera bawaan HP.');$('f-cam').click()}}
+async function camSwitch(){const old=CF;CF=CF==='environment'?'user':'environment';try{await camStart()}catch(e){CF=old;try{await camStart()}catch(x){}alert('Kamera lain tidak tersedia')}}
+function camClose(){camStop();$('cam').style.display='none';$('camv').srcObject=null;renderThumbs()}
+async function camShot(){const v=$('camv');if(!v.videoWidth)return;if(PH.length>=8){alert('Maksimal 8 foto per barang');return}
+  const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
+  v.style.opacity='.3';setTimeout(()=>{v.style.opacity='1'},120);if(navigator.vibrate)navigator.vibrate(25);
+  try{const b=await shrink(c);PH.push({name:pname(),blob:b,url:URL.createObjectURL(b)});CN++;$('camn').textContent='('+CN+')'}catch(e){alert('Foto gagal diproses')}}
+if(document.addEventListener)document.addEventListener('visibilitychange',()=>{if(document.hidden&&CS)camClose()});
 let PH=[];const URLC={};
 async function photoUrl(n){if(URLC[n])return URLC[n];const b=await IMG.get(n);return b?(URLC[n]=URL.createObjectURL(b)):''}
 function loadThumbs(){document.querySelectorAll('img[data-p]').forEach(async im=>{try{const u=await photoUrl(im.dataset.p);if(u)im.src=u}catch(e){}})}
 function big(im){if(!im.src)return;$('ovi').src=im.src;$('ov').style.display='flex'}
-async function addPhotos(el){for(const f of [...el.files]){try{const b=await squash(f);PH.push({name:Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.jpg',blob:b,url:URL.createObjectURL(b)})}catch(e){alert('Foto tidak bisa diproses (format tidak didukung?)')}}el.value='';renderThumbs()}
+async function addPhotos(el){for(const f of [...el.files]){if(PH.length>=8){alert('Maksimal 8 foto per barang');break}try{const b=await squash(f);PH.push({name:pname(),blob:b,url:URL.createObjectURL(b)})}catch(e){alert('Foto tidak bisa diproses (format tidak didukung?)')}}el.value='';renderThumbs()}
 function renderThumbs(){$('thumbs').innerHTML=PH.map((p,n)=>`<div style="position:relative"><img class="th" src="${p.url}"><button class="d" style="position:absolute;top:-6px;right:-6px;padding:0 7px;border-radius:99px" onclick="PH.splice(${n},1);renderThumbs()">×</button></div>`).join('')}
 function importJson(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);
   if(!Array.isArray(d.items))throw 0;if(!confirm('Ganti semua data saat ini dengan isi file?'))return;S={items:d.items,tpls:d.tpls||{},next:d.next||(Math.max(0,...d.items.map(i=>i.id))+1),kats:d.kats||[],log:d.log||[],kinit:1};norm();save();refresh();restorePhotos(d.photosData).then(()=>{refresh();alert('Impor berhasil')})}catch(e){alert('File tidak valid')}};r.readAsText(f);el.value=''}
@@ -271,14 +305,16 @@ let Q=null;
 function log(t,cls){if(Q){Q.push(t);return}const o=$('out');o.textContent+=(o.textContent?'\n':'')+t;o.scrollTop=o.scrollHeight}
 const tok=s=>(s.match(/(?:[^\s="]+="[^"]*"|"[^"]*"|\S+)/g)||[]).map(t=>t.replace(/"/g,''));
 const TM={s:'storage',storage:'storage',d:'daily',daily:'daily',o:'other',other:'other',t:'throw',throw:'throw',throwable:'throw'};
-const RK=['type','cat','qty','kat','exp','loc','note','cond','unit','price','bought','min','cont'];
+const RK=['type','cat','qty','kat','exp','loc','note','cond','unit','price','bought','min','cont','wadah'];
 function kv(a){const o={},p=[];a.forEach(t=>{const i=t.indexOf('=');i>0?o[t.slice(0,i)]=t.slice(i+1):p.push(t)});return{o,p}}
-function fmt(i){const s=Object.entries(i.specs).map(([k,v])=>k+'='+v).join(', ');return `#${i.id} ${i.name} [${i.type}${i.kat?'/'+i.kat:''}${i.cat?'/'+i.cat:''}] x${i.qty}${i.unit?' '+i.unit:''}${i.loc?' @'+i.loc:''}${i.cont?' in#'+i.cont:''}${i.cond!==''?' kond:'+i.cond:''}${i.exp?' exp:'+i.exp:''}${s?' | '+s:''}`}
+function fmt(i){const s=Object.entries(i.specs).map(([k,v])=>k+'='+v).join(', ');return `#${i.id} ${i.name} [${i.type}${i.kat?'/'+i.kat:''}${i.cat?'/'+i.cat:''}] x${i.qty}${i.unit?' '+i.unit:''}${i.loc?' @'+i.loc:''}${i.cont?' in#'+i.cont:''}${i.wadah?' [wadah]':''}${i.cond!==''?' kond:'+i.cond:''}${i.exp?' exp:'+i.exp:''}${s?' | '+s:''}`}
+function markCont(i){if(i.cont){const w=S.items.find(x=>x.id===+i.cont);if(w)w.wadah=true}}
+const isY=v=>/^(1|y|ya|true)$/i.test(v||'');
 const nm=v=>v===''||v===undefined||isNaN(+v)?'':+v;
 function applySet(i,o){Object.entries(o).forEach(([k,v])=>{if(k==='name')i.name=v;else if(k==='qty')i.qty=Math.max(0,parseInt(v)||0);
   else if(k==='type'){if(TM[v.toLowerCase()])i.type=TM[v.toLowerCase()]}else if(k==='cond'||k==='cont')i[k]=v===''?'':+v;else if(k==='price'||k==='min')i[k]=nm(v);
-  else if(['cat','kat','loc','exp','note','unit','bought'].includes(k))i[k]=v;else if(v==='')delete i.specs[k];else i.specs[k]=v});
-  if(i.kat&&!S.kats.includes(i.kat))S.kats.push(i.kat)}
+  else if(k==='wadah')i.wadah=isY(v);else if(['cat','kat','loc','exp','note','unit','bought'].includes(k))i[k]=v;else if(v==='')delete i.specs[k];else i.specs[k]=v});
+  if(i.wadah&&!i.cat)i.cat='Wadah';if(i.kat&&!S.kats.includes(i.kat))S.kats.push(i.kat);markCont(i)}
 function chk(o){const D=/^\d{4}-\d{2}-\d{2}$/;if(o.exp&&!D.test(o.exp))return'exp harus YYYY-MM-DD';if(o.bought&&!D.test(o.bought))return'bought harus YYYY-MM-DD';
   if(o.cond&&!(/^\d+$/.test(o.cond)&&o.cond>=1&&o.cond<=10))return'cond harus 1-10';if(o.cont&&!S.items.some(x=>x.id===+o.cont))return'cont: id wadah tidak ada';return''}
 function ren(t,a,b){let n=0;S.items.forEach(i=>{if(i[t]===a){i[t]=b;n++}});
@@ -287,7 +323,7 @@ function ren(t,a,b){let n=0;S.items.forEach(i=>{if(i[t]===a){i[t]=b;n++}});
 function run(line){if(line.trim().startsWith('#'))return;const a=tok(line.trim());if(!a.length)return;const c=a.shift().toLowerCase(),{o,p}=kv(a);
   const find=id=>S.items.find(i=>i.id===parseInt(id));
   const er=chk(o);if(er)return log('Error: '+er);
-  if(c==='help')return log(`add "Nama" type=s|d|o|t kat=Kelistrikan cat=Adaptor qty=2 loc=Rak1 exp=2027-01-31 note=... unit=pcs cond=1-10 price=25000 bought=2026-10-01 min=2 cont=<id wadah> spek=isi
+  if(c==='help')return log(`add "Nama" type=s|d|o|t kat=Kelistrikan cat=Adaptor qty=2 loc=Rak1 exp=2027-01-31 note=... unit=pcs cond=1-10 price=25000 bought=2026-10-01 min=2 cont=<id wadah> wadah=1 spek=isi
   ren kat|cat <lama> <baru>   ganti nama kategori/sub kategori
   type: s=storage d=daily o=other t=throwable
 ls [kata] [type=s|d|o|t]    daftar (ls exp = yang punya tanggal exp)
@@ -301,8 +337,8 @@ undo (urungkan hapus, 12 detik) | stats | export | reset yes | clear`);
   if(c==='add'){const name=p[0];if(!name)return log('Error: nama kosong. Contoh: add "SSD 1TB" type=s kat=Komputer cat=SSD qty=2 kapasitas=1TB');
     const type=TM[(o.type||'s').toLowerCase()];if(!type)return log('Error: type harus s/d/o/t (storage/daily/other/throwable)');
     const specs={};Object.keys(o).forEach(k=>{if(!RK.includes(k))specs[k]=o[k]});
-    const it={id:S.next++,photos:[],name,type,kat:o.kat||'',cat:o.cat||'',loc:o.loc||'',exp:o.exp||'',note:o.note||'',cond:o.cond?+o.cond:'',unit:o.unit||'',price:nm(o.price),bought:o.bought||'',min:nm(o.min),cont:o.cont?+o.cont:'',qty:o.qty===undefined?1:Math.max(0,parseInt(o.qty)||0),specs};
-    if(it.kat&&!S.kats.includes(it.kat)&&!DK.includes(it.kat))S.kats.push(it.kat);S.items.push(it);H('Tambah #'+it.id+' '+it.name);save();refresh();
+    const it={id:S.next++,photos:[],name,type,kat:o.kat||'',cat:o.cat||(isY(o.wadah)?'Wadah':''),loc:o.loc||'',exp:o.exp||'',note:o.note||'',cond:o.cond?+o.cond:'',unit:o.unit||'',price:nm(o.price),bought:o.bought||'',min:nm(o.min),cont:o.cont?+o.cont:'',wadah:isY(o.wadah),qty:o.qty===undefined?1:Math.max(0,parseInt(o.qty)||0),specs};
+    if(it.kat&&!S.kats.includes(it.kat)&&!DK.includes(it.kat))S.kats.push(it.kat);S.items.push(it);markCont(it);H('Tambah #'+it.id+' '+it.name);save();refresh();
     const miss=(S.tpls[it.cat]||[]).filter(f=>!(f in specs));log('OK '+fmt(it)+(miss.length?'\nTemplate '+it.cat+' belum terisi: '+miss.join(', '):''));return}
   if(c==='ls'){const q=p.join(' ').toLowerCase(),t=o.type?TM[o.type.toLowerCase()]:null;
     const L=S.items.filter(i=>(!t||i.type===t)&&(!q||fmt(i).toLowerCase().includes(q)));return log(L.length?L.map(fmt).join('\n'):'(kosong)')}
